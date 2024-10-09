@@ -1,0 +1,6 @@
+.vscode
+a.out
+Aarch64
+*.o
+*.c
+test
