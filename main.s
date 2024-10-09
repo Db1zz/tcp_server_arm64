@@ -1,4 +1,3 @@
-.include "sys_calls.s"
 .extern socket
 
 .text
@@ -15,6 +14,9 @@
 #define AF_INET 2
 #define SOCK_STREAM 1
 #define INTERNET_PROTOCOL 0
+
+#define EXIT_SUCCESS 0
+#define EXIT_FAILURE 1
 
 .macro load_addr register, addr
 	adrp \register, \addr@PAGE
@@ -64,12 +66,6 @@
 	bl _write
 .endm
 
-.macro exit status
-	mov X16, SYS_EXIT
-	mov X0, \status
-	svc #0
-.endm
-
 _main:
 _load_socket:
 	write STDOUT, loading_socket_msg, loading_socket_msg_len
@@ -114,7 +110,7 @@ _send_response:
 	load_addr X0, new_sockfd
 	ldr X0, [X0]
 	write X0, server_response_msg, server_response_msg_len
-	b _exit
+	b _exit_program
 
 _close_fds:
 	stp X29, X30, [sp, #-16]!
@@ -130,12 +126,14 @@ _close_fds:
 _error:
 	write STDOUT, error_msg, error_msg_len
 	bl _close_fds
-	exit #-1
+	mov X0, EXIT_FAILURE
+	bl _exit
 
-_exit:
+_exit_program:
 	write STDOUT, ok_msg, ok_msg_len
 	bl _close_fds
-	exit #0
+	mov X0, EXIT_SUCCESS
+	bl _exit
 
 .data
 .align 8

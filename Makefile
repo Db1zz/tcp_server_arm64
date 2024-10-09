@@ -4,8 +4,7 @@ CC = as
 LINKER = clang
 FLAGS = -x assembler-with-cpp
 
-SRCS =	main.s \
-		sys_calls.s
+SRCS =	main.s
 
 OBJS = $(SRCS:.s=.o)
 
