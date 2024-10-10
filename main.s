@@ -4,11 +4,11 @@
 .global _main
 .align 8
 
-#define STDIN    0 
-#define STDOUT   1
-#define STDERR   2
+#define STDIN 0 
+#define STDOUT 1
+#define STDERR 2
 
-#define PORT       14619
+#define PORT 14619
 #define INADDR_ANY 0
 
 #define AF_INET 2
@@ -19,126 +19,125 @@
 #define EXIT_FAILURE 1
 
 .macro load_addr register, addr
-	adrp \register, \addr@PAGE
-	add \register, \register, \addr@PAGEOFF
+    adrp \register, \addr@PAGE
+    add \register, \register, \addr@PAGEOFF
 .endm
 
 .macro func_call func, p0, p1, p2
-	mov X0, \p0
-	mov X1, \p1
-	mov X2, \p2
-	bl \func
+    mov X0, \p0
+    mov X1, \p1
+    mov X2, \p2
+    bl \func
 .endm
 
 // int sockfd = socket(domain, type, protocol);
 .macro socket domain, type, protocol
-	func_call _socket, \domain, \type, \protocol
+    func_call _socket, \domain, \type, \protocol
 .endm
 
 // int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
 .macro bind sockfd, addr, addrlen
-	func_call _bind, \sockfd, \addr, \addrlen
+    func_call _bind, \sockfd, \addr, \addrlen
 .endm
 
 // int listen(int sockfd, int backlog);
 .macro listen sockfd, backlog
-	mov X0, \sockfd
-	mov X1, \backlog
-	bl _listen
+    mov X0, \sockfd
+    mov X1, \backlog
+    bl _listen
 .endm
 
 // int accept(int, struct sockaddr * __restrict, socklen_t * __restrict)
 .macro accept sockfd, addr, addrlen
-	func_call _accept, \sockfd, \addr, \addrlen
+    func_call _accept, \sockfd, \addr, \addrlen
 .endm
 
 // int close(int fd);
 .macro close fd
-	mov X0, \fd
-	bl _close
+    mov X0, \fd
+    bl _close
 .endm
 
 .macro write fd, buff_addr, len_addr
-	mov X0, \fd
-	load_addr X1, \buff_addr
-	load_addr X2, \len_addr
-	ldr W2, [X2]
-	bl _write
+    mov X0, \fd
+    load_addr X1, \buff_addr
+    load_addr X2, \len_addr
+    ldr W2, [X2]
+    bl _write
 .endm
 
 _main:
 _load_socket:
-	write STDOUT, loading_socket_msg, loading_socket_msg_len
-	socket AF_INET, SOCK_STREAM, #0
-	cmp X0, #0
-	b.lt _error
-	adrp X12, sockfd@PAGE
-	add X12, X12, sockfd@PAGEOFF
-	str X0, [X12]
-	ldr X11, [X12]
+    write STDOUT, loading_socket_msg, loading_socket_msg_len
+    socket AF_INET, SOCK_STREAM, #0
+    cmp X0, #0
+    b.lt _error
+    adrp X12, sockfd@PAGE
+    add X12, X12, sockfd@PAGEOFF
+    str X0, [X12]
+    ldr X11, [X12]
 
 _bind_socket:
-	write STDOUT, binding_socket_msg, binding_socket_msg_len
-	mov X0, X11
-	load_addr X1, address.sin_len
-	load_addr X2, address.struct_size
-	ldr X2, [X2]
-	bind X0, X1, X2
-	cmp X0, #0
-	b.lt _error
+    write STDOUT, binding_socket_msg, binding_socket_msg_len
+    mov X0, X11
+    load_addr X1, address.sin_len
+    load_addr X2, address.struct_size
+    ldr X2, [X2]
+    bind X0, X1, X2
+    cmp X0, #0
+    b.lt _error
 
 _listen_socket:
-	write STDOUT, listen_socket_msg, listen_socket_msg_len
-	mov X0, X11
-	listen X0, #3
-	cmp X0, #0
-	b.lt _error
+    write STDOUT, listen_socket_msg, listen_socket_msg_len
+    mov X0, X11
+    listen X0, #3
+    cmp X0, #0
+    b.lt _error
 
-_loop:
 _accept_connections:
-	write STDOUT, accept_connections_msg, accept_connections_msg_len
-	mov X0, X11
-	load_addr X1, address.sin_len
-	load_addr X2, address.struct_size
-	bl _accept
-	cmp X0, #0
-	b.lt _error
-	load_addr X1, new_sockfd
-	str X0, [X1]
+    write STDOUT, accept_connections_msg, accept_connections_msg_len
+    mov X0, X11
+    load_addr X1, address.sin_len
+    load_addr X2, address.struct_size
+    bl _accept
+    cmp X0, #0
+    b.lt _error
+    load_addr X1, new_sockfd
+    str X0, [X1]
 
 _send_response:
-	load_addr X0, new_sockfd
-	ldr X0, [X0]
-	write X0, server_response_msg, server_response_msg_len
-	b _exit_program
+    load_addr X0, new_sockfd
+    ldr X0, [X0]
+    write X0, server_response_msg, server_response_msg_len
+    b _exit_program
 
 _close_fds:
-	stp X29, X30, [sp, #-16]!
-	load_addr X0, sockfd
-	ldr X0, [X0]
-	bl _close
-	load_addr X0, new_sockfd
-	ldr X0, [X0]
-	bl _close
-	ldp X29, X30, [sp], #16
-	ret
+    stp X29, X30, [sp, #-16]!
+    load_addr X0, sockfd
+    ldr X0, [X0]
+    bl _close
+    load_addr X0, new_sockfd
+    ldr X0, [X0]
+    bl _close
+    ldp X29, X30, [sp], #16
+    ret
 
 _error:
-	write STDOUT, error_msg, error_msg_len
-	bl _close_fds
-	mov X0, EXIT_FAILURE
-	bl _exit
+    write STDOUT, error_msg, error_msg_len
+    bl _close_fds
+    mov X0, EXIT_FAILURE
+    bl _exit
 
 _exit_program:
-	write STDOUT, ok_msg, ok_msg_len
-	bl _close_fds
-	mov X0, EXIT_SUCCESS
-	bl _exit
+    write STDOUT, ok_msg, ok_msg_len
+    bl _close_fds
+    mov X0, EXIT_SUCCESS
+    bl _exit
 
 .data
 .align 8
 // Socket fds
-sockfd:     .xword 0
+sockfd: .xword 0
 new_sockfd: .xword 0
 
 // Structs
